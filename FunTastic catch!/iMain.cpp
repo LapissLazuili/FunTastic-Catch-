@@ -37,7 +37,7 @@ const int MAX_FISH_NUMBER = 35;
 int menuBg, aboutUsBg, highScoreBg, playBg, catBg; // Added playBg
 
 //Fish var
-enum FishType { BLUEANGEL, HOLUD, LALTHOT, BEGUNITHOT, FREEZEORB, SHARK, HOLUDDORI, NEMO, OCTOPUS };
+enum FishType { BLUEANGEL, HOLUD, LALTHOT, BEGUNITHOT, FREEZEORB, SHARK, HOLUDDORI, NEMO, OCTOPUS, MAGNETORB };
 
 //
 int blueAngel_left;
@@ -75,6 +75,11 @@ bool isInk = false;
 int inkDuration = 5000;
 clock_t inkStartTime = 0;
 
+int magnetOrb;
+bool isMagnet = false;  
+int magnetDuration = 5000; 
+clock_t magnetStartTime = 0; 
+
 int three_hp_pic,two_hp_pic,one_hp_pic;
 
 int total_money = 0;
@@ -96,7 +101,7 @@ struct Button backButton = { 20, screenSizeY - 75, 200, 50, false };
 
 // Current screen state
 enum Screen { MENU, PLAY, HIGH_SCORE, ABOUT_US };
-Screen currentScreen = MENU;
+Screen currentScreen = PLAY;
 
 // Initialize button positions and sizes
 void initializeButtons() {
@@ -240,7 +245,14 @@ Fish createFish() {
 			fish.imageLeft = octopus_left;
 			fish.imageRight = octopus_right;
 			break;
-
+		case 7:
+			fish.type = MAGNETORB;
+			fish.width = 45;
+			fish.height = 45;
+			fish.speed = 10;
+			fish.imageLeft = magnetOrb;
+			fish.imageRight = magnetOrb;
+			break;
 		default:
 			fish.type =BEGUNITHOT;
 			fish.width = 45;
@@ -301,34 +313,7 @@ void drawFishes() {
 
 
 
-void moveFish() {
 
-
-	if (isFrozen) {
-		// Check if 5 seconds have passed
-		if ((clock() - freezeStartTime) * 1000 / CLOCKS_PER_SEC > freezeDuration) {
-			isFrozen = false; // Unfreeze fish
-		}
-		else {
-			return; // Stop fish movement
-		}
-	}
-
-
-	for (int i = 0; i <MAX_FISH_NUMBER; i++) {
-		Fish &fish = fishArray[i];
-		fish.fish_x += fish.movingRight ? fish.speed : -fish.speed;
-
-		// Wrap around screen
-		if (fish.fish_x > screenSizeX) fish.fish_x = -fish.width;
-		if (fish.fish_x + fish.width < 0) fish.fish_x = screenSizeX;
-	}
-
-
-
-
-
-}
 
 
 void moveFishVertically(int direction){
@@ -356,6 +341,8 @@ void successfulCatch(int i){
 
 }
 
+
+
 void fishAttach(int i){
 
 	
@@ -381,6 +368,13 @@ void fishAttach(int i){
 		successfulCatch(i);
 		return;
 	}
+	else if (fish.type == MAGNETORB){
+		isMagnet = true;
+		magnetStartTime = clock();
+		successfulCatch(i);
+		return;
+
+	}
 
 	fish.fish_y = hook_y-fish.height/2;
 	fish.fish_x = hook_x-5;
@@ -389,6 +383,62 @@ void fishAttach(int i){
 	if (hook_x == rod_x && hook_y >= rod_y-150)
 		successfulCatch(i);
 		
+
+
+}
+
+void moveFish() {
+
+
+	if (isFrozen) {
+		// Check if 5 seconds have passed
+		if ((clock() - freezeStartTime) * 1000 / CLOCKS_PER_SEC > freezeDuration) {
+			isFrozen = false; // Unfreeze fish
+		}
+		else {
+			return; // Stop fish movement
+		}
+	}
+	if (isMagnet) {
+
+		if ((clock() - magnetStartTime) * 1000 / CLOCKS_PER_SEC > magnetDuration)
+			isMagnet = false;
+		else{
+		printf("Magnetic");
+		for (int i = 0; i < MAX_FISH_NUMBER; i++) {
+			// Move fish towards the hook
+			int dx = hook_x - fishArray[i].fish_x;
+			int dy = hook_y - fishArray[i].fish_y;
+			float distance = sqrt(dx * dx + dy * dy);
+
+			// Normalize direction and move fish towards hook
+			if (distance<=200.0) {
+				fishArray[i].fish_x += (dx / distance) * 10;  // Move faster
+				fishArray[i].fish_y += (dy / distance) * 10;
+
+
+				// Auto-catch fish when close
+				if (distance < hook_radius) {
+					fishAttach(i);
+				}
+			}
+			}
+		}
+	}
+	
+
+
+	for (int i = 0; i <MAX_FISH_NUMBER; i++) {
+		Fish &fish = fishArray[i];
+		fish.fish_x += fish.movingRight ? fish.speed : -fish.speed;
+
+		// Wrap around screen
+		if (fish.fish_x > screenSizeX) fish.fish_x = -fish.width;
+		if (fish.fish_x + fish.width < 0) fish.fish_x = screenSizeX;
+	}
+
+
+
 
 
 }
@@ -733,6 +783,7 @@ void loadPower(){
 	two_hp_pic = iLoadImage("asset\\power\\two_hp.png");
 	one_hp_pic = iLoadImage("asset\\power\\one_hp.png");
 	freezeOrb = iLoadImage("asset\\power\\freeze_orb.png");
+	magnetOrb = iLoadImage("asset\\power\\magnet_orb.png");
 }
 void loadFish(){
 
